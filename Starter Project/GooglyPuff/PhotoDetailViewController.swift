@@ -54,21 +54,27 @@ final class PhotoDetailViewController: UIViewController {
     
 //    let overlayImage = faceOverlayImageFrom(image)
 //    fadeInNewImage(overlayImage)
-//    replace this with >
+    
+    /* replace this with >>> */
+    
+    // 1
     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        
         guard let self = self else {
             return
         }
         let overlayImage = self.faceOverlayImageFrom(self.image)
-        
+        // 2
         DispatchQueue.main.async { [weak self] in
+            // 3
             self?.fadeInNewImage(overlayImage)
         }
     }
+ 
     /*
      
-     move the work to the background global queue and run the work in the closure asynchronously. this lets viewdidLoad() finish earlier on the main thread and makes loading more snappy. 
+     1) move the work to the background global queue and run the work in the closure asynchronously. this lets viewdidLoad() finish earlier on the main thread and makes loading more snappy. meanwhile the face detection process is started and will finish at a later time.
+     2) by the next dispatchQueue, the face detection process has completed and you've generated a new picture. since wanting to update the UIImage, we use main because all modifies to the UI must run on the main thread.
+     3) finally you update the UI with fadeInNewImage(_:) which performs a fade in transition.
      
      */
     
