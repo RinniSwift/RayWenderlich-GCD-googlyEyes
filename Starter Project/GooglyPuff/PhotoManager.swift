@@ -46,19 +46,64 @@ typealias PhotoProcessingProgressClosure = (_ completionPercentage: CGFloat) -> 
 typealias BatchPhotoDownloadingCompletionClosure = (_ error: NSError?) -> Void
 
 final class PhotoManager {
-  private init() {}
+  private init() {}                         // how you initialize a singleton
   static let shared = PhotoManager()
-  
+    
+    
+  private let concurrentPhotoQueue =
+    DispatchQueue(
+        label: "com.raywenderlich.GooglyPuff.photoQueue",
+        attributes: .concurrent)
+  // ^^^ this initializes concurrentPhotoQueue as a concurrent queue. the lable is a descriptive name that is helpful during debugging
+    
+    
   private var unsafePhotos: [Photo] = []
   
-  var photos: [Photo] {
-    return unsafePhotos
-  }
+    var photos: [Photo] {
+        var photosCopy: [Photo]!
+        
+        // 1
+        concurrentPhotoQueue.sync {
+            
+            // 2
+            photosCopy = self.unsafePhotos
+        }
+        return photosCopy
+    }
+    /*
+     
+     1) dipatch synchronously on the concurrentPhotoQueue to perform the read
+     2) store a copy of the photos array in the photosCopy and return it
+     
+    */
+    
+    
   
   func addPhoto(_ photo: Photo) {
-    unsafePhotos.append(photo)
-    DispatchQueue.main.async { [weak self] in
-      self?.postContentAddedNotification()
+//    unsafePhotos.append(photo)              // this is a write method because it modifies a mutable array
+//    DispatchQueue.main.async { [weak self] in
+//      self?.postContentAddedNotification()
+//    }
+    
+    concurrentPhotoQueue.async(flags: .barrier) { [weak self] in
+        // 1
+        guard let self = self else {
+            return
+        }
+        
+        // 2
+        self.unsafePhotos.append(photo)
+        
+        // 3
+        DispatchQueue.main.async { [weak self] in
+            self?.postContentAddedNotification()
+        }
+        
+        /*
+         1) dispatch the write operation asynchronously with a barrier.
+         2) add the object to the array
+         3) post a notification that you've added a photo.
+        */
     }
   }
   
