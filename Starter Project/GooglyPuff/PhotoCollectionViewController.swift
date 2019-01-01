@@ -90,7 +90,31 @@ final class PhotoCollectionViewController: UICollectionViewController {
 // MARK: - Private Methods
 private extension PhotoCollectionViewController {
   func showOrHideNavPrompt() {
-    // Implement me!
+    // 1)
+    let delayInSeconds = 2.0
+    // 2)
+    DispatchQueue.main.asyncAfter(deadline: .now() + delayInSeconds) { [weak self] in
+        guard let self = self else {
+            return
+        }
+        
+        if PhotoManager.shared.photos.count > 0 {
+            self.navigationItem.prompt = nil
+        } else {
+            self.navigationItem.prompt = "Add photos with faces to Googlify them!"
+        }
+        // 3)
+        self.navigationController?.viewIfLoaded?.setNeedsLayout()
+    }
+    
+    /*
+     
+     1) specify the amount to delay
+     2) wait for the specified time then asynchronously run the block which updates the photo count and updates the prompt
+     3) force the layout navigation bar to layout after setting the prompt to make sure it looks kosher
+     
+    */
+    
   }
   
   func downloadImageAssets() {
