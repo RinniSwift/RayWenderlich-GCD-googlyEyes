@@ -124,32 +124,46 @@ final class PhotoManager {
 //    completion?(storedError)    // we incorrectly assume this methods happens when all the photos are finished              downloading. wrong.
     // what we want is for the downloadPhotos(withCompletion:) to call its completion closure after all photos have been downloaded.
     
+    // 1
     DispatchQueue.global(qos: .userInitiated).async {
-        
         var storedError: NSError?
         
+        // 2
         let downloadGroup = DispatchGroup()
         for address in [PhotoURLString.overlyAttachedGirlfriend,
                         PhotoURLString.lotsOfFaces,
                         PhotoURLString.successKid] {
             let url = URL(string: address)
             
+            // 3
             downloadGroup.enter()
                             let photo = DownloadPhoto(url: url!) {_, error in
                                 if error != nil {
                                     storedError = error
                                 }
-                                
+                                // 4
                                 downloadGroup.leave()
                             }
             PhotoManager.shared.addPhoto(photo)
         }
         
+        // 5
         downloadGroup.wait()
         
+        // 6
         DispatchQueue.main.async {
             completion?(storedError)
         }
+        /*
+         
+         1) we're using the synchronous wait method which blocks the current thread, you use async to place the entire method into a background queue to ensure you dont block the main queue.
+         2) create a new dispatch group
+         3) call enter() to notify the group that a task has started. must balance the number of enter() with leave()
+         4) notify the group that the work is done
+         5) call wait to block the current thread while waiting for tasks completion
+         6) it is guaranteed that all the photos have either completed or timed out. you then create a call back to the main queue to run the completion closure
+         
+        */
     }
     
     
