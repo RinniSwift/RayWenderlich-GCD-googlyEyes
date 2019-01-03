@@ -125,46 +125,30 @@ final class PhotoManager {
     // what we want is for the downloadPhotos(withCompletion:) to call its completion closure after all photos have been downloaded.
     
     // 1
-    DispatchQueue.global(qos: .userInitiated).async {
-        var storedError: NSError?
-        
-        // 2
-        let downloadGroup = DispatchGroup()
-        for address in [PhotoURLString.overlyAttachedGirlfriend,
-                        PhotoURLString.lotsOfFaces,
-                        PhotoURLString.successKid] {
-            let url = URL(string: address)
-            
-            // 3
-            downloadGroup.enter()
-                            let photo = DownloadPhoto(url: url!) {_, error in
-                                if error != nil {
-                                    storedError = error
-                                }
-                                // 4
-                                downloadGroup.leave()
-                            }
-            PhotoManager.shared.addPhoto(photo)
+    var storedError: NSError?
+    let downloadGroup = DispatchGroup()
+    for address in [PhotoURLString.lotsOfFaces, PhotoURLString.overlyAttachedGirlfriend, PhotoURLString.successKid] {
+        let url = URL(string: address)
+        downloadGroup.enter()
+        let photo = DownloadPhoto(url: url!) {_, error in
+            if error != nil {
+                storedError = error
+            }
+            downloadGroup.leave()
         }
-        
-        // 5
-        downloadGroup.wait()
-        
-        // 6
-        DispatchQueue.main.async {
-            completion?(storedError)
-        }
-        /*
-         
-         1) we're using the synchronous wait method which blocks the current thread, you use async to place the entire method into a background queue to ensure you dont block the main queue.
-         2) create a new dispatch group
-         3) call enter() to notify the group that a task has started. must balance the number of enter() with leave()
-         4) notify the group that the work is done
-         5) call wait to block the current thread while waiting for tasks completion
-         6) it is guaranteed that all the photos have either completed or timed out. you then create a call back to the main queue to run the completion closure
-         
-        */
+        PhotoManager.shared.addPhoto(photo)
     }
+    // 2
+    downloadGroup.notify(queue: DispatchQueue.main) {
+        completion?(storedError)
+    }
+    
+    /*
+     
+     1) we dont need to surround the method in an async call since we're not blocking the main thread
+     2) runs when there are no more items left in the group. we also specify that we want the completion closure to run on the main queue
+     
+    */
     
     
     
