@@ -108,20 +108,52 @@ final class PhotoManager {
   }
   
   func downloadPhotos(withCompletion completion: BatchPhotoDownloadingCompletionClosure?) {
-    var storedError: NSError?
-    for address in [PhotoURLString.overlyAttachedGirlfriend,
-                    PhotoURLString.successKid,
-                    PhotoURLString.lotsOfFaces] {
-                      let url = URL(string: address)
-                      let photo = DownloadPhoto(url: url!) { _, error in
-                        if error != nil {
-                          storedError = error
-                        }
-                      }
-                      PhotoManager.shared.addPhoto(photo)
+//    var storedError: NSError?
+//    for address in [PhotoURLString.overlyAttachedGirlfriend,
+//                    PhotoURLString.successKid,
+//                    PhotoURLString.lotsOfFaces] {
+//                      let url = URL(string: address)
+//                      let photo = DownloadPhoto(url: url!) { _, error in
+//                        if error != nil {
+//                          storedError = error
+//                        }
+//                      }
+//                      PhotoManager.shared.addPhoto(photo)
+//    }
+//
+//    completion?(storedError)    // we incorrectly assume this methods happens when all the photos are finished              downloading. wrong.
+    // what we want is for the downloadPhotos(withCompletion:) to call its completion closure after all photos have been downloaded.
+    
+    DispatchQueue.global(qos: .userInitiated).async {
+        
+        var storedError: NSError?
+        
+        let downloadGroup = DispatchGroup()
+        for address in [PhotoURLString.overlyAttachedGirlfriend,
+                        PhotoURLString.lotsOfFaces,
+                        PhotoURLString.successKid] {
+            let url = URL(string: address)
+            
+            downloadGroup.enter()
+                            let photo = DownloadPhoto(url: url!) {_, error in
+                                if error != nil {
+                                    storedError = error
+                                }
+                                
+                                downloadGroup.leave()
+                            }
+            PhotoManager.shared.addPhoto(photo)
+        }
+        
+        downloadGroup.wait()
+        
+        DispatchQueue.main.async {
+            completion?(storedError)
+        }
     }
     
-    completion?(storedError)
+    
+    
   }
   
   private func postContentAddedNotification() {
