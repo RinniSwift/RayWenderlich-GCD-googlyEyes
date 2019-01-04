@@ -127,7 +127,10 @@ final class PhotoManager {
     // 1
     var storedError: NSError?
     let downloadGroup = DispatchGroup()
-    for address in [PhotoURLString.lotsOfFaces, PhotoURLString.overlyAttachedGirlfriend, PhotoURLString.successKid] {
+    let addresses = [PhotoURLString.lotsOfFaces, PhotoURLString.overlyAttachedGirlfriend, PhotoURLString.successKid]
+    let _ = DispatchQueue.global(qos: .userInitiated)
+    DispatchQueue.concurrentPerform(iterations: addresses.count) { index in
+        let address = addresses[index]
         let url = URL(string: address)
         downloadGroup.enter()
         let photo = DownloadPhoto(url: url!) {_, error in
@@ -146,7 +149,7 @@ final class PhotoManager {
     /*
      
      1) we dont need to surround the method in an async call since we're not blocking the main thread
-     2) runs when there are no more items left in the group. we also specify that we want the completion closure to run on the main queue
+     2) runs when there are no more items left in the group. we also specify that we want the completion closure to run on the main queuea
      
     */
     
