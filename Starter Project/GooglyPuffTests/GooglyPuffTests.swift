@@ -46,6 +46,33 @@ class GooglyPuffTests: XCTestCase {
   }
   
   func downloadImageURL(withString urlString: String) {
-    XCTFail("Not implemented!")
+    
+    let url = URL(string: urlString)
+    
+    // 1
+    let semaphore = DispatchSemaphore(value: 0)
+    let _ = DownloadPhoto(url: url!) {_, error in
+        if let error = error {
+            XCTFail("\(urlString) failed. \(error.localizedDescription)")
+        }
+        
+        // 2
+        semaphore.signal()
+    }
+    let timeout = DispatchTime.now() + .seconds(defaultTimeoutLengthInSeconds)
+    
+    // 3
+    if semaphore.wait(timeout: timeout) == .timedOut {
+        XCTFail("\(urlString) timed out.")
+    }
+    
+    /*
+     
+     1) create a semaphore and set its start value
+     2) you signal the metaphor in the completion closure
+     3) wait on the semaphore with a given timeout. this call blocks the current thread
+    */
+    
+    
   }
 }

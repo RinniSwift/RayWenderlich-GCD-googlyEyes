@@ -177,7 +177,7 @@ final class PhotoManager {
      
      1) expand the addresses array to hold three copies of each image
      2) initialize the blocks array to contain dispatch block objects for later use
-     3) create a new dispatchWorkItem. pass the flag parameter to specify the blocj should inherit the QoS from the queue you dispatch it to
+     3) create a new dispatchWorkItem. pass the flag parameter to specify the block should inherit the QoS from the queue you dispatch it to
      4) dispatch the block asynchronously to the main queue
      5) skip the first three download blocks by slicing the blocks array
      6) randomly pick between true and false
