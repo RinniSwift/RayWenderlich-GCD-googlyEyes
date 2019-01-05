@@ -124,37 +124,68 @@ final class PhotoManager {
 //    completion?(storedError)    // we incorrectly assume this methods happens when all the photos are finished              downloading. wrong.
     // what we want is for the downloadPhotos(withCompletion:) to call its completion closure after all photos have been downloaded.
     
-    // 1
     var storedError: NSError?
     let downloadGroup = DispatchGroup()
-    let addresses = [PhotoURLString.lotsOfFaces, PhotoURLString.overlyAttachedGirlfriend, PhotoURLString.successKid]
-    let _ = DispatchQueue.global(qos: .userInitiated)
-    DispatchQueue.concurrentPerform(iterations: addresses.count) { index in
-        let address = addresses[index]
-        let url = URL(string: address)
-        downloadGroup.enter()
-        let photo = DownloadPhoto(url: url!) {_, error in
-            if error != nil {
-                storedError = error
-            }
-            downloadGroup.leave()
-        }
-        PhotoManager.shared.addPhoto(photo)
-    }
+    
+    var addresses = [PhotoURLString.lotsOfFaces, PhotoURLString.overlyAttachedGirlfriend, PhotoURLString.successKid]
+    
+    // 1
+    addresses += addresses + addresses
+    
     // 2
+    var blocks = [DispatchWorkItem]()
+    
+    for index in 0..<addresses.count {
+        downloadGroup.enter()
+        
+        // 3
+        let block = DispatchWorkItem(flags: .inheritQoS) {
+            let address = addresses[index]
+            let url = URL(string: address)
+            let photo = DownloadPhoto(url: url!) {_, error in
+                if error != nil {
+                    storedError = error
+                }
+                downloadGroup.leave()
+            }
+            PhotoManager.shared.addPhoto(photo)
+        }
+        blocks.append(block)
+        
+        // 4
+        DispatchQueue.main.async(execute: block)
+    }
+    // 5
+    for block in blocks[3..<blocks.count] {
+        
+        // 6
+        let cancel = Bool.random()
+        if cancel {
+            // 7
+            block.cancel()
+            // 8
+            downloadGroup.leave()
+            
+        }
+    }
+    // 9
     downloadGroup.notify(queue: DispatchQueue.main) {
         completion?(storedError)
     }
     
     /*
      
-     1) we dont need to surround the method in an async call since we're not blocking the main thread
-     2) runs when there are no more items left in the group. we also specify that we want the completion closure to run on the main queuea
+     1) expand the addresses array to hold three copies of each image
+     2) initialize the blocks array to contain dispatch block objects for later use
+     3) create a new dispatchWorkItem. pass the flag parameter to specify the blocj should inherit the QoS from the queue you dispatch it to
+     4) dispatch the block asynchronously to the main queue
+     5) skip the first three download blocks by slicing the blocks array
+     6) randomly pick between true and false
+     7) if the random value is true, you cancel the block. this only cancels a block inside the queue which has not been executed yet
+     8) here we remember to remove the canceled block from the dispatch group
+     9) runs when there are no more items left in the group. we also specify that we want the completion closure to run on the main queuea
      
     */
-    
-    
-    
   }
   
   private func postContentAddedNotification() {
